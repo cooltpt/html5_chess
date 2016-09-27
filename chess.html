@@ -1,0 +1,588 @@
+<html>
+
+<head>
+
+   <style>
+body {
+   background: white;
+}
+
+table,
+th,
+td {
+   background: lightgrey;
+   border: 1px solid black;
+   border-collapse: collapse;
+   text-align: center;
+   font-size: 180%;
+   cursor: move;
+}
+
+tr:nth-child(even) td:nth-child(odd),
+tr:nth-child(odd) td:nth-child(even) {
+   background: steelblue;
+}
+
+#chessTable .borderCells {
+   background-color: darkslategrey;
+   color: white;
+   border: 0px;
+   cursor: cell;
+}
+   </style>
+
+   <script>
+
+var sourceElement = {};
+
+var globalData = {
+   blackKingHasMoved: false,
+   whiteKingHasMoved: false,
+   blackLeftRookHasMoved: false,
+   blackRightRookHasMoved: false,
+   whiteLeftRookHasMoved: false,
+   whiteRightRookHasMoved: false,
+};
+
+function subtractChars(ch1, ch2) {
+   return ch1.charCodeAt(0) - ch2.charCodeAt(0);
+}
+
+function allowDrop(ev) {
+
+   //if (sourceElement.innerHTML.charCodeAt(0) == 38) return;
+
+   var sourceId = sourceElement.id;
+   var colrow = sourceId.split("");
+   var sourceCol = colrow[0];
+   var sourceRow = colrow[1];
+   var sourceColIdx = subtractChars(sourceCol, 'A') + 1;
+   var sourceRowIdx = 9 - sourceRow;
+
+   var targetId = ev.target.id;
+   var colrow = targetId.split("");
+   var targetCol = colrow[0];
+   var targetRow = colrow[1];
+   var targetColIdx = subtractChars(targetCol, 'A') + 1
+   var targetRowIdx = 9 - targetRow;
+
+   var movingPiece = sourceElement.innerHTML.charCodeAt(0);
+   var targetPiece = ev.target.innerHTML.charCodeAt(0);
+
+   //console.log(sourceCol,"/",sourceColIdx,":",sourceRow,"/",sourceRowIdx);
+   //console.log(targetCol,"/",targetColIdx,":",targetRow,"/",targetRowIdx);
+
+   if (ev.target.innerHTML.charCodeAt(0) != 38) {
+      if (movingPiece > 9817 && targetPiece > 9817) return;
+      if (movingPiece < 9818 && targetPiece < 9818) return;
+   }
+
+
+   var moveData = {
+      sourceRow: sourceRowIdx,
+      sourceCol: sourceColIdx,
+      targetRow: targetRowIdx,
+      targetCol: targetColIdx,
+   };
+
+   if (movingPiece == "9812" || movingPiece == "9818") {
+      if (!kingMoveAllowed(moveData)) return;
+   }
+
+   if (movingPiece == "9813" || movingPiece == "9819") {
+      if (!queenMoveAllowed(moveData)) return;
+   }
+
+   if (movingPiece == "9814" || movingPiece == "9820") {
+      if (!rookMoveAllowed(moveData)) return;
+   }
+
+   if (movingPiece == "9815" || movingPiece == "9821") {
+      if (!bishopMoveAllowed(moveData)) return;
+   }
+
+   if (movingPiece == "9816" || movingPiece == "9822") {
+      if (!knightMoveAllowed(moveData)) return;
+   }
+
+   if (movingPiece == "9817" || movingPiece == "9823") {
+      if (!pawnMoveAllowed(moveData)) return;
+   }
+
+   ev.preventDefault(); // drop allowed
+}
+
+function drag(ev) {
+   sourceElement = ev.target;
+   ev.dataTransfer.setData("text", ev.target.id);
+   if (sourceElement.innerHTML.charCodeAt(0) == 38) {
+      ev.returnValue = false;
+      ev.preventDefault();
+   }
+}
+
+function drop(ev) {
+   ev.preventDefault();
+   ev.target.innerHTML = sourceElement.innerHTML;
+   sourceElement.innerHTML = "&nbsp";
+
+   var movingPiece = ev.target.innerHTML.charCodeAt(0);
+
+
+   //
+   // castle move
+   //
+
+   if (movingPiece == 9812 || movingPiece == 9818) {
+      var sourceId = sourceElement.id;
+      var targetId = ev.target.id;
+
+      if (movingPiece == 9812 || movingPiece == 9818) {
+         var sourceId = sourceElement.id;
+         var targetId = ev.target.id;
+         if (movingPiece == 9812) {
+            if (sourceId == "E1" && targetId == "G1") {
+               if (chessTable.rows[8].cells[8].innerHTML.charCodeAt(0) == 9814) {
+                  chessTable.rows[8].cells[8].innerHTML = "&nbsp";
+                  chessTable.rows[8].cells[6].innerHTML = "&#9814";
+               }
+            }
+            if (sourceId == "E1" && targetId == "B1") {
+               if (chessTable.rows[8].cells[1].innerHTML.charCodeAt(0) == 9814) {
+                  chessTable.rows[8].cells[1].innerHTML = "&nbsp";
+                  chessTable.rows[8].cells[3].innerHTML = "&#9814";
+               }
+            }
+         }
+         if (movingPiece == 9818) {
+            if (sourceId == "E8" && targetId == "G8") {
+               if (chessTable.rows[1].cells[8].innerHTML.charCodeAt(0) == 9820) {
+                  chessTable.rows[1].cells[8].innerHTML = "&nbsp";
+                  chessTable.rows[1].cells[6].innerHTML = "&#9820";
+               }
+            }
+            if (sourceId == "E8" && targetId == "B8") {
+               if (chessTable.rows[1].cells[1].innerHTML.charCodeAt(0) == 9820) {
+                  chessTable.rows[1].cells[1].innerHTML = "&nbsp";
+                  chessTable.rows[1].cells[3].innerHTML = "&#9820";
+               }
+            }
+         }
+      }
+
+   }
+
+   //
+   // castle move - allowed
+   //
+
+   if (movingPiece == 9812) globalData.whiteKingHasMoved = true;
+   if (movingPiece == 9818) globalData.blackKingHasMoved = true;
+
+
+   if (movingPiece == 9814) {
+      if (sourceElement.id == "A1") globalData.whiteLeftRookHasMoved  = true;
+      if (sourceElement.id == "H1") globalData.whiteRightRookHasMoved = true;
+   }
+
+   if (movingPiece == 9820) {
+      if (sourceElement.id == "A8") globalData.blackLeftRookHasMoved  = true;
+      if (sourceElement.id == "H8") globalData.blackRightRookHasMoved = true;
+   }
+
+
+   //
+   // convert pawn to queen
+   //
+
+   if (movingPiece == 9817) {
+      if (ev.target.id.split('')[1] == '8') {
+         ev.target.innerHTML = "&#9813";
+      }
+   }
+
+   if (movingPiece == 9823) {
+      if (ev.target.id.split('')[1] == '1') {
+         ev.target.innerHTML = "&#9819";
+      }
+   }
+
+}
+
+
+//
+// move rules
+//
+
+function kingMoveAllowed(moveData) {
+
+   var rowDist = Math.abs(moveData.sourceRow - moveData.targetRow);
+   var colDist = Math.abs(moveData.sourceCol - moveData.targetCol);
+   if (rowDist < 2 && colDist < 2) {
+      return true;
+   }
+
+
+   //
+   // castle move
+   //
+
+   if (moveData.targetCol != 2 && moveData.targetCol != 7) return false;
+
+   movingPiece = sourceElement.innerHTML.charCodeAt(0);
+   if (movingPiece == 9812) {
+      if (globalData.whiteKingHasMoved == true) return false;
+      if (moveData.sourceRow != 8) return false;
+   } else {
+      if (globalData.blackKingHasMoved == true) return false;
+      if (moveData.sourceRow != 1) return false;
+   }
+
+   if (movingPiece == 9812) {
+
+      if (moveData.targetCol == 2) {
+         if (globalData.whiteLeftRookHasMoved == true) return false;
+         if (chessTable.rows[8].cells[3].innerHTML != "&nbsp;") return false;
+         if (chessTable.rows[8].cells[4].innerHTML != "&nbsp;") return false;
+         if (chessTable.rows[8].cells[1].innerHTML.charCodeAt(0) != 9814) return false;
+      }
+
+      if (moveData.targetCol == 7) {
+         if (globalData.whiteRightRookHasMoved == true) return false;
+         if (chessTable.rows[8].cells[6].innerHTML != "&nbsp;") return false;
+         if (chessTable.rows[8].cells[8].innerHTML.charCodeAt(0) != 9814) return false;
+      }
+
+   } else {
+
+      if (moveData.targetCol == 2) {
+         if (globalData.blackLeftRookHasMoved == true) return false;
+         if (chessTable.rows[1].cells[3].innerHTML != "&nbsp;") return false;
+         if (chessTable.rows[1].cells[4].innerHTML != "&nbsp;") return false;
+         if (chessTable.rows[1].cells[1].innerHTML.charCodeAt(0) != 9820) return false;
+      }
+
+      if (moveData.targetCol == 7) {
+         if (globalData.blackRightRookHasMoved == true) return false;
+         if (chessTable.rows[1].cells[6].innerHTML != "&nbsp;") return false;
+         if (chessTable.rows[1].cells[8].innerHTML.charCodeAt(0) != 9820) return false;
+      }
+   }
+
+   return true;
+}
+
+function queenMoveAllowed(moveData) {
+
+   var rowDist = Math.abs(moveData.sourceRow - moveData.targetRow);
+   var colDist = Math.abs(moveData.sourceCol - moveData.targetCol);
+
+   if (rowDist == 0) {
+      if (moveData.sourceCol > moveData.targetCol) {
+         //console.log("left");
+         for (var idx = moveData.sourceCol - 1; idx > 0 && idx > moveData.targetCol; idx--) {
+            if (chessTable.rows[moveData.sourceRow].cells[idx].innerHTML != "&nbsp;") return false;
+         }
+      } else {
+         //console.log("right");
+         for (var idx = moveData.sourceCol + 1; idx < chessTable.rows[moveData.sourceRow].cells.length - 1 && idx < moveData.targetCol; idx++) {
+            if (chessTable.rows[moveData.sourceRow].cells[idx].innerHTML != "&nbsp;") return false;
+         }
+      }
+      return true;
+   }
+
+   if (colDist == 0) {
+      if (moveData.sourceRow > moveData.targetRow) {
+         //console.log("up");
+         for (var idx = moveData.sourceRow - 1; idx > 0 && idx > moveData.targetRow; idx--) {
+            if (chessTable.rows[idx].cells[moveData.sourceCol].innerHTML != "&nbsp;") return false;
+         }
+      } else {
+         //console.log("down");
+         for (var idx = moveData.sourceRow + 1; idx < chessTable.rows.length - 1 && idx < moveData.targetRow; idx++) {
+            if (chessTable.rows[idx].cells[moveData.sourceCol].innerHTML != "&nbsp;") return false;
+         }
+      }
+      return true;
+   }
+
+   if (colDist != rowDist) return false;
+
+   idx1 = moveData.sourceRow;
+   idx2 = moveData.sourceCol;
+
+   while (true) {
+      var flag = false;
+      if (idx1 < moveData.targetRow - 1) {
+         idx1++;
+         flag = true;
+      }
+      if (idx1 > moveData.targetRow + 1) {
+         idx1--;
+         flag = true;
+      }
+      if (idx2 < moveData.targetCol - 1) {
+         idx2++;
+         flag = true;
+      }
+      if (idx2 > moveData.targetCol + 1) {
+         idx2--;
+         flag = true;
+      }
+      if (flag == false) break;
+      if (chessTable.rows[idx1].cells[idx2].innerHTML != "&nbsp;") return false;
+   }
+
+   return true;
+}
+
+function rookMoveAllowed(moveData) {
+
+   if (moveData.sourceCol != moveData.targetCol && moveData.sourceRow != moveData.targetRow) return false;
+
+   if (moveData.sourceCol == moveData.targetCol) {
+
+      if (moveData.sourceRow > moveData.targetRow) {
+         //console.log("up");
+         for (var idx = moveData.sourceRow - 1; idx > 0 && idx > moveData.targetRow; idx--) {
+            if (chessTable.rows[idx].cells[moveData.sourceCol].innerHTML != "&nbsp;") return false;
+         }
+      } else {
+         //console.log("down");
+         for (var idx = moveData.sourceRow + 1; idx < chessTable.rows.length - 1 && idx < moveData.targetRow; idx++) {
+            if (chessTable.rows[idx].cells[moveData.sourceCol].innerHTML != "&nbsp;") return false;
+         }
+      }
+
+   } else {
+
+      if (moveData.sourceCol > moveData.targetCol) {
+         //console.log("left");
+         for (var idx = moveData.sourceCol - 1; idx > 0 && idx > moveData.targetCol; idx--) {
+            if (chessTable.rows[moveData.sourceRow].cells[idx].innerHTML != "&nbsp;") return false;
+         }
+      } else {
+         //console.log("right");
+         for (var idx = moveData.sourceCol + 1; idx < chessTable.rows[moveData.sourceRow].cells.length - 1 && idx < moveData.targetCol; idx++) {
+            if (chessTable.rows[moveData.sourceRow].cells[idx].innerHTML != "&nbsp;") return false;
+         }
+      }
+   }
+
+   return true;
+}
+
+function bishopMoveAllowed(moveData) {
+
+   var rowDist = Math.abs(moveData.sourceRow - moveData.targetRow);
+   var colDist = Math.abs(moveData.sourceCol - moveData.targetCol);
+
+   if (colDist != rowDist) return false;
+
+   idx1 = moveData.sourceRow;
+   idx2 = moveData.sourceCol;
+
+   while (true) {
+      var flag = false;
+      if (idx1 < moveData.targetRow - 1) {
+         idx1++;
+         flag = true;
+      }
+      if (idx1 > moveData.targetRow + 1) {
+         idx1--;
+         flag = true;
+      }
+      if (idx2 < moveData.targetCol - 1) {
+         idx2++;
+         flag = true;
+      }
+      if (idx2 > moveData.targetCol + 1) {
+         idx2--;
+         flag = true;
+      }
+      if (flag == false) break;
+      if (chessTable.rows[idx1].cells[idx2].innerHTML != "&nbsp;") return false;
+   }
+
+   return true;
+}
+
+function knightMoveAllowed(moveData) {
+
+   var rowDist = Math.abs(moveData.sourceRow - moveData.targetRow);
+   var colDist = Math.abs(moveData.sourceCol - moveData.targetCol);
+
+   if (rowDist == 2 && colDist == 1) return true;
+   if (colDist == 2 && rowDist == 1) return true;
+
+   return false;
+}
+
+function pawnMoveAllowed(moveData) {
+
+   var rowDist = Math.abs(moveData.sourceRow - moveData.targetRow);
+   var colDist = Math.abs(moveData.sourceCol - moveData.targetCol);
+
+   movingPiece = sourceElement.innerHTML.charCodeAt(0);
+
+   if (movingPiece == 9817 && moveData.sourceRow < moveData.targetRow) return false;
+   if (movingPiece == 9823 && moveData.sourceRow > moveData.targetRow) return false;
+
+   if (colDist == 0 && rowDist == 1) {
+      if (chessTable.rows[moveData.targetRow].cells[moveData.targetCol].innerHTML == "&nbsp;") return true;
+   }
+
+   if (colDist == 0 && rowDist == 2) {
+      if (movingPiece == 9817 && moveData.sourceRow == 7) {
+         if (chessTable.rows[moveData.targetRow].cells[moveData.targetCol].innerHTML == "&nbsp;") {
+            if (chessTable.rows[moveData.targetRow + 1].cells[moveData.targetCol].innerHTML == "&nbsp;") {
+               return true;
+            }
+         }
+      }
+      if (movingPiece == 9823 && moveData.sourceRow == 2) {
+         if (chessTable.rows[moveData.targetRow].cells[moveData.targetCol].innerHTML == "&nbsp;") {
+            if (chessTable.rows[moveData.targetRow - 1].cells[moveData.targetCol].innerHTML == "&nbsp;") {
+               return true;
+            }
+         }
+      }
+   }
+
+   if (rowDist == colDist && rowDist == 1) {
+      if (chessTable.rows[moveData.targetRow].cells[moveData.targetCol].innerHTML != "&nbsp;") return true;
+   }
+
+   return false;
+}
+   </script>
+</head>
+
+<body>
+   <table id="chessTable">
+      <tr>
+         <td class="borderCells">&nbsp</td>
+         <td class="borderCells">A</td>
+         <td class="borderCells">B</td>
+         <td class="borderCells">C</td>
+         <td class="borderCells">D</td>
+         <td class="borderCells">E</td>
+         <td class="borderCells">F</td>
+         <td class="borderCells">G</td>
+         <td class="borderCells">H</td>
+         <td class="borderCells">&nbsp</td>
+      </tr>
+      <tr>
+         <td class="borderCells">8</td>
+         <td id="A8" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9820</td>
+         <td id="B8" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9822</td>
+         <td id="C8" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9821</td>
+         <td id="D8" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9819</td>
+         <td id="E8" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9818</td>
+         <td id="F8" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9821</td>
+         <td id="G8" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9822</td>
+         <td id="H8" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9820</td>
+         <td class="borderCells">8</td>
+      </tr>
+      <tr>
+         <td class="borderCells">7</td>
+         <td id="A7" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9823</td>
+         <td id="B7" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9823</td>
+         <td id="C7" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9823</td>
+         <td id="D7" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9823</td>
+         <td id="E7" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9823</td>
+         <td id="F7" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9823</td>
+         <td id="G7" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9823</td>
+         <td id="H7" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9823</td>
+         <td class="borderCells">7</td>
+      </tr>
+      <tr>
+         <td class="borderCells">6</td>
+         <td id="A6" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="B6" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="C6" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="D6" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="E6" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="F6" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="G6" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="H6" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td class="borderCells">6</td>
+      </tr>
+      <tr>
+         <td class="borderCells">5</td>
+         <td id="A5" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="B5" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="C5" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="D5" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="E5" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="F5" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="G5" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="H5" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td class="borderCells">5</td>
+      </tr>
+      <tr>
+         <td class="borderCells">4</td>
+         <td id="A4" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="B4" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="C4" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="D4" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="E4" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="F4" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="G4" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="H4" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td class="borderCells">4</td>
+      </tr>
+      <tr>
+         <td class="borderCells">3</td>
+         <td id="A3" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="B3" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="C3" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="D3" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="E3" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="F3" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="G3" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td id="H3" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&nbsp</td>
+         <td class="borderCells">3</td>
+      </tr>
+      <tr>
+         <td class="borderCells">2</td>
+         <td id="A2" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9817</td>
+         <td id="B2" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9817</td>
+         <td id="C2" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9817</td>
+         <td id="D2" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9817</td>
+         <td id="E2" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9817</td>
+         <td id="F2" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9817</td>
+         <td id="G2" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9817</td>
+         <td id="H2" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9817</td>
+         <td class="borderCells">2</td>
+      </tr>
+      <tr>
+         <td class="borderCells">1</td>
+         <td id="A1" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9814</td>
+         <td id="B1" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9816</td>
+         <td id="C1" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9815</td>
+         <td id="D1" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9813</td>
+         <td id="E1" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9812</td>
+         <td id="F1" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9815</td>
+         <td id="G1" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9816</td>
+         <td id="H1" draggable="true" ondragstart="drag(event)" ondrop="drop(event)" ondragover="allowDrop(event)">&#9814</td>
+         <td class="borderCells">1</td>
+      </tr>
+      <tr>
+         <td class="borderCells">&nbsp</td>
+         <td class="borderCells">A</td>
+         <td class="borderCells">B</td>
+         <td class="borderCells">C</td>
+         <td class="borderCells">D</td>
+         <td class="borderCells">E</td>
+         <td class="borderCells">F</td>
+         <td class="borderCells">G</td>
+         <td class="borderCells">H</td>
+         <td class="borderCells">&nbsp</td>
+      </tr>
+   </table>
+
+</body>
+
+</html>
