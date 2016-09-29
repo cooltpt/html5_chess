@@ -7,9 +7,7 @@ body {
    background: white;
 }
 
-table,
-th,
-td {
+table,th,td {
    background: lightgrey;
    border: 1px solid black;
    border-collapse: collapse;
@@ -314,22 +312,10 @@ function queenMoveAllowed(moveData) {
 
    while (true) {
       var flag = false;
-      if (idx1 < moveData.targetRow - 1) {
-         idx1++;
-         flag = true;
-      }
-      if (idx1 > moveData.targetRow + 1) {
-         idx1--;
-         flag = true;
-      }
-      if (idx2 < moveData.targetCol - 1) {
-         idx2++;
-         flag = true;
-      }
-      if (idx2 > moveData.targetCol + 1) {
-         idx2--;
-         flag = true;
-      }
+      if (idx1 < moveData.targetRow - 1) { idx1++; flag = true; }
+      if (idx1 > moveData.targetRow + 1) { idx1--; flag = true; }
+      if (idx2 < moveData.targetCol - 1) { idx2++; flag = true; }
+      if (idx2 > moveData.targetCol + 1) { idx2--; flag = true; }
       if (flag == false) break;
       if (chessTable.rows[idx1].cells[idx2].innerHTML != "&nbsp;") return false;
    }
@@ -385,22 +371,10 @@ function bishopMoveAllowed(moveData) {
 
    while (true) {
       var flag = false;
-      if (idx1 < moveData.targetRow - 1) {
-         idx1++;
-         flag = true;
-      }
-      if (idx1 > moveData.targetRow + 1) {
-         idx1--;
-         flag = true;
-      }
-      if (idx2 < moveData.targetCol - 1) {
-         idx2++;
-         flag = true;
-      }
-      if (idx2 > moveData.targetCol + 1) {
-         idx2--;
-         flag = true;
-      }
+      if (idx1 < moveData.targetRow - 1) { idx1++; flag = true; } 
+      if (idx1 > moveData.targetRow + 1) { idx1--; flag = true; }
+      if (idx2 < moveData.targetCol - 1) { idx2++; flag = true; }
+      if (idx2 > moveData.targetCol + 1) { idx2--; flag = true; }
       if (flag == false) break;
       if (chessTable.rows[idx1].cells[idx2].innerHTML != "&nbsp;") return false;
    }
